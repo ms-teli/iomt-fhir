@@ -90,6 +90,59 @@ namespace Microsoft.Health.Fhir.Ingest.Template
             },
         };
 
+        private static readonly IContentTemplate ValueComparisionTemplate = new JsonPathContentTemplate
+        {
+            TypeName = "virtual-care-bmi",
+            TypeMatchExpression = "$..[?(@TypeId == 20)]",
+            DeviceIdExpression = "$.FhirPatientId",
+            TimestampExpression = "$.ObservedDate",
+            PatientIdExpression = "$.FhirPatientId",
+            Values = new List<JsonPathValueExpression>
+            {
+              new JsonPathValueExpression { ValueName = "bmi", ValueExpression = "$.Value", Required = true },
+            },
+        };
+
+        [Fact]
+        public void GivenValueComparisionMatchExpression_WhenGetMeasurements_ThenSingleMeasurementReturned_Test()
+        {
+            var time = DateTime.Parse("2020-05-07T08:50:01");
+            var id = Guid.NewGuid().ToString();
+
+            var token = JToken.FromObject(
+                new
+                {
+                    Id = 1000,
+                    PatientId = 1,
+                    FhirPatientId = id,
+                    Type = "Body Mass Index",
+                    TypeId = 20,
+                    VendorObservationId = 123456789,
+                    Vendor = "myvendor",
+                    VendorId = 3,
+                    Units = "%",
+                    ObservedDate = "2020-05-07T08:50:01",
+                    Value = 27.67,
+                });
+
+            var result = ValueComparisionTemplate.GetMeasurements(token).ToArray();
+
+            Assert.NotNull(result);
+            Assert.Collection(result, m =>
+            {
+                Assert.Equal("virtual-care-bmi", m.Type);
+                Assert.Equal(time, m.OccurrenceTimeUtc);
+                Assert.Equal(id, m.DeviceId);
+                Assert.Equal(id, m.PatientId);
+                Assert.Null(m.EncounterId);
+                Assert.Collection(m.Properties, p =>
+                {
+                    Assert.Equal("bmi", p.Name);
+                    Assert.Equal("27.67", p.Value);
+                });
+            });
+        }
+
         [Fact]
         public void GivenMultiValueTemplateAndValidTokenWithMissingValue_WhenGetMeasurements_ThenSingleMeasurementReturned_Test()
         {
