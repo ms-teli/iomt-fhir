@@ -57,9 +57,9 @@ The JsonPathContentTemplate allows matching on and extracting values from an Eve
 | --- | --- | ---
 |**TypeName**|The type to associate with measurements that match the template.|`heartrate`
 |**TypeMatchExpression**|The JSON Path expression that is evaluated against the EventData payload. If a matching JToken is found the template is considered a match. All subsequent expressions are evaluated against the extracted JToken matched here.|`$..[?(@heartRate)]`
-|**TimestampExpression**|The JSON Path expression to extract the timestamp value for the measurement's OccurenceTimeUtc.|`$.endDate`
+|**TimestampExpression**|The JSON Path expression to extract the timestamp value for the measurement's OccurrenceTimeUtc.|`$.endDate`
 |**DeviceIdExpression**|The JSON Path expression to extract the device identifier.|`$.deviceId`
-|**PatientIdExpression**|*Optional*: The JSON Path expression to extract the patient identifier.|`$.patientId`
+|**PatientIdExpression**|*Required* when IdentityResolution is in [Create](ARMInstallation.md#Resource-Identity-Resolution-Type) mode and *Optional* when IdentityResolution is in [Lookup](ARMInstallation.md#Resource-Identity-Resolution-Type) mode. The JSON Path expression to extract the patient identifier.|`$.patientId`
 |**EncounterIdExpression**|*Optional*: The JSON Path expression to extract the encounter identifier.|`$.encounterId`
 |**CorrelationIdExpression**|*Optional*: The JSON Path expression to extract the correlation identifier.  If extracted this value can be used to group values into a single observation in the FHIR mapping template.|`$.correlationId`
 |**Values[].ValueName**|The name to associate with the value extracted by the subsequent expression. Used to bind the desired value/component in the FHIR mapping template. |`hr`
@@ -346,6 +346,120 @@ The assumption when using this template is the messages being evaluated were sen
     ]
 }
 ```
+
+### **IotCentralJsonPathContentTemplate**
+
+The IotCentralJsonPathContentTemplate is similar to the JsonPathContentTemplate except the DeviceIdExpression and TimestampExpression are not required.
+
+The assumption when using this template is the messages being evaluated were sent using the `Export Data` feature of [Azure IoT Central](https://docs.microsoft.com/en-us/azure/iot-central/core/howto-export-data).  When using this feature the device identity (assuming the device id from Iot Central is registered as an identifer for a device resource on the destination FHIR server) is known as well as the timestamp of the message. If you are using this export feature but are using custom properties in the message body for the device identity or measurement timestamp you can still use the JsonPathContentTemplate.
+
+*Note: When using the IotCentralJsonPathContentTemplate the TypeMatchExpression should resolve to the entire message as a JToken.  Please see the examples below.*
+
+#### Examples
+
+---
+
+**Heart Rate**
+
+*Message*
+```json
+{
+    "applicationId": "1dffa667-9bee-4f16-b243-25ad4151475e",
+    "messageSource": "telemetry",
+    "deviceId": "1vzb5ghlsg1",
+    "schema": "default@v1",
+    "templateId": "urn:qugj6vbw5:___qbj_27r",
+    "enqueuedTime": "2020-08-05T22:26:55.455Z",
+    "telemetry": {
+        "Activity": "running",
+        "BloodPressure": {
+            "Diastolic": 7,
+            "Systolic": 71
+        },
+        "BodyTemperature": 98.73447010562934,
+        "HeartRate": 88,
+        "HeartRateVariability": 17,
+        "RespiratoryRate": 13
+    },
+    "enrichments": {
+      "userSpecifiedKey": "sampleValue"
+    },
+    "messageProperties": {
+      "messageProp": "value"
+    }
+}
+```
+*Template*
+```json
+{
+    "templateType": "IotCentralJsonPathContent",
+    "template": {
+        "typeName": "heartrate",
+        "typeMatchExpression": "$..[?(@telemetry.HeartRate)]",
+        "values": [
+            {
+                "required": "true",
+                "valueExpression": "$.telemetry.HeartRate",
+                "valueName": "hr"
+            }
+        ]
+    }
+}
+```
+---
+**Blood Pressure**
+
+*Message*
+```json
+{
+    "applicationId": "1dffa667-9bee-4f16-b243-25ad4151475e",
+    "messageSource": "telemetry",
+    "deviceId": "1vzb5ghlsg1",
+    "schema": "default@v1",
+    "templateId": "urn:qugj6vbw5:___qbj_27r",
+    "enqueuedTime": "2020-08-05T22:26:55.455Z",
+    "telemetry": {
+        "Activity": "running",
+        "BloodPressure": {
+            "Diastolic": 7,
+            "Systolic": 71
+        },
+        "BodyTemperature": 98.73447010562934,
+        "HeartRate": 88,
+        "HeartRateVariability": 17,
+        "RespiratoryRate": 13
+    },
+    "enrichments": {
+      "userSpecifiedKey": "sampleValue"
+    },
+    "messageProperties": {
+      "messageProp": "value"
+    }
+}
+```
+*Template*
+```json
+{
+    "templateType": "IotCentralJsonPathContent",
+    "template": {
+        "typeName": "bloodPressure",
+        "typeMatchExpression": "$..[?(@telemetry.BloodPressure.Diastolic && @telemetry.BloodPressure.Systolic)]",
+        "values": [
+            {
+                "required": "true",
+                "valueExpression": "$.telemetry.BloodPressure.Diastolic",
+                "valueName": "bp_diastolic"
+            },
+            {
+                "required": "true",
+                "valueExpression": "$.telemetry.BloodPressure.Systolic",
+                "valueName": "bp_systolic"
+            }
+        ]
+    }
+}
+```
+---
 
 # FHIR Mapping
 

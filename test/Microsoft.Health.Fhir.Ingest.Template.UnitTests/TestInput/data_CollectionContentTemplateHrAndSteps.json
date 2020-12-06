@@ -18,28 +18,17 @@
       }
     },
     {
-      "templateType": "IotJsonPathContent",
+      "templateType": "JsonPathContent",
       "template": {
-        "typeName": "bootTime",
-        "values": [
-          {
-            "required": "false",
-            "valueExpression": "$.Body.patientActiveTime",
-            "valueName": "activeTime"
-          }
-        ]
-      }
-    },
-    {
-      "templateType": "IotCentralJsonPathContent",
-      "template": {
-        "typeName": "heartrate",
-        "typeMatchExpression": "$..[?(@telemetry.HeartRate)]",
+        "typeName": "steps",
+        "typeMatchExpression": "$..[?(@steps)]",
+        "deviceIdExpression": "$.device",
+        "timestampExpression": "$.date",
         "values": [
           {
             "required": "true",
-            "valueExpression": "$.telemetry.HeartRate",
-            "valueName": "hr"
+            "valueExpression": "$.steps",
+            "valueName": "steps"
           }
         ]
       }
